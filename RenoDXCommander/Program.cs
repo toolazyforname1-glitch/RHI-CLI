@@ -16,8 +16,13 @@ public static class Program
     internal static volatile bool XamlStarted;
 
     [STAThread]
-    private static void Main(string[] args)
+    private static int Main(string[] args)
     {
+        // Terminal mode: `RHI.exe --cli <command> ...` runs a command and exits without starting
+        // WinUI, so a batch file never opens a window and never waits for the app runtime.
+        if (args.Length > 0 && Cli.CliHost.IsEntryPoint(args[0]))
+            return Cli.CliHost.Run(args[1..]);
+
         try
         {
             XamlGeneratedProgram.XamlGeneratedMain();
@@ -27,7 +32,10 @@ public static class Program
             try { Services.CrashReporter.Log($"[Program.Main] WinUI failed to start — {ex.GetType().Name}: {ex.Message}"); }
             catch (Exception logEx) { Debug.WriteLine($"[Program.Main] Log failed — {logEx.Message}"); }
             ShowRuntimeMissing(ex);
+            return 1;
         }
+
+        return 0;
     }
 
     private static void ShowRuntimeMissing(Exception ex)

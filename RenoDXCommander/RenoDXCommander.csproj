@@ -21,8 +21,8 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <AssemblyName>RHI</AssemblyName>
     <AssemblyTitle>RHI</AssemblyTitle>
-    <AssemblyVersion>2.9.1.0</AssemblyVersion>
-    <FileVersion>2.9.1.0</FileVersion>
+    <AssemblyVersion>2.9.2.0</AssemblyVersion>
+    <FileVersion>2.9.2.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -200,5 +200,9 @@
     <PackageReference Include="NvAPIWrapper.Net" Version="0.8.1.101" />
     <PackageReference Include="SharpCompress" Version="0.37.2" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\LiveAddon\rhi-live.addon32" Link="rhi-live.addon32" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\LiveAddon\rhi-live.addon32')" />
+    <None Include="..\LiveAddon\rhi-live.addon64" Link="rhi-live.addon64" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\LiveAddon\rhi-live.addon64')" />
   </ItemGroup>
 </Project>

@@ -1,52 +1,73 @@
-.vs
+# ---------------------------------------------------------------------------
+# RHI CLI 2.0.0 - portable ignore rules.
+# Nothing here refers to a specific machine, user or absolute path: every rule
+# matches a file type or a folder that a build or an editor creates anywhere.
+# ---------------------------------------------------------------------------
+
+# --- Windows and editor junk ---
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.DS_Store
+
+# --- Visual Studio, MSBuild, .NET SDK ---
+.vs/
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+*.userprefs
+*.cache
+*.nupkg
+*.snupkg
+*.binlog
+*.tlog
+*.log
+project.lock.json
+
+# --- JetBrains Rider / other IDEs ---
+.idea/
+*.sln.iml
+
+# --- Addon build outputs (only under LiveAddon) ---
+# The shipped rhi-live.addon32 / .addon64 are committed on purpose.
+LiveAddon/*.pdb
+LiveAddon/*.ilk
+LiveAddon/*.exp
+LiveAddon/*.lib
+LiveAddon/*.obj
+!LiveAddon/rhi-live.addon32
+!LiveAddon/rhi-live.addon64
+
+# --- Upstream project rules (kept so a fork behaves exactly as before) ---
 Logs
 Luma
-RenoDXCommander/bin
-RenoDXCommander/obj
-RenoDXCommander.Tests/bin
-RenoDXCommander.Tests/obj
-RHI.DropHelper/bin
-RHI.DropHelper/obj
 OPTI/
 downloads_tidyup.md
-
 tools/*.md
-tools/RHI-Stats/bin
-tools/RHI-Stats/obj
 tools/RHI-Stats/out
 tools/RHI-Stats/out-small
-tools/RHI-ManifestEditor/RHI.ManifestEditor/bin
-tools/RHI-ManifestEditor/RHI.ManifestEditor/obj
-tools/RenoDXdb-Editor/RenoDXdbEditor/bin
-tools/RenoDXdb-Editor/RenoDXdbEditor/obj
 tools/RenoDXdb-Editor/publish/
-tools/PCGW-Editor/PCGWEditor/bin
-tools/PCGW-Editor/PCGWEditor/obj
 tools/PCGW-Editor/publish/
 tools/pcgw-fetch/__pycache__/
 tools/pcgw-fetch/*.pyc
+__pycache__/
+*.pyc
 pcgw.md
 nexusmods.md
-
 nexusreport.md
 todo.md
 nvidiaProfileInspector-master/
-
-docs/v2.3.3-test-checklist.md
-docs/handover-*.md
+OptiScaler-DLSSNR-v*/
 docs/RenoDXdb*.json
+docs/handover-*.md
+docs/v2.3.3-test-checklist.md
 docs/ui-freeze-audit-report.md
 docs/ui-freeze-fix-tasks.md
 docs/ui-polish-fix-tasks.md
-OptiScaler-DLSSNR-v*/
-
-# Claude Code personal settings (shared .claude/settings.json is committed)
 .claude/settings.local.json
-__pycache__/
+reports/
+research_notes/
 
-# rhictl
-RHI.Core/bin/
-RHI.Core/obj/
-RHI.Cli/bin/
-RHI.Cli/obj/
-dist/

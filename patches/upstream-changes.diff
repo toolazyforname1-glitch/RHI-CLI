@@ -1,0 +1,295 @@
+diff --git a/RenoDXCommander/App.xaml.cs b/RenoDXCommander/App.xaml.cs
+index bd57ce53..babedb32 100644
+--- a/RenoDXCommander/App.xaml.cs
++++ b/RenoDXCommander/App.xaml.cs
+@@ -14,7 +14,7 @@ public partial class App : Application
+     /// <summary>
+     /// The application-wide DI service provider.
+     /// </summary>
+-    public static IServiceProvider Services { get; private set; } = null!;
++    public static IServiceProvider Services { get; internal set; } = null!;
+ 
+     public App()
+     {
+@@ -24,130 +24,12 @@ public partial class App : Application
+         // This catches AppDomain, TaskScheduler, and WinUI exceptions.
+         CrashReporter.Register(this);
+ 
+-        // Configure DI container
++        // Configure DI container - registrations live in ServiceRegistration so the terminal host shares them
+         var services = new ServiceCollection();
+-
+-        // Shared HttpClient ÔÇö singleton with UserAgent header and optimised connection settings
+-        services.AddSingleton<HttpClient>(sp =>
+-        {
+-            var handler = new SocketsHttpHandler
+-            {
+-                // Allow modern protocols ÔÇö HTTP/2 multiplexes streams over a single
+-                // TCP connection which avoids head-of-line blocking and dramatically
+-                // improves throughput from CDNs like GitHub Pages / Releases.
+-                EnableMultipleHttp2Connections = true,
+-
+-                // Raise the per-server connection cap so parallel downloads from the
+-                // same host aren't serialised behind two sockets.
+-                MaxConnectionsPerServer = 16,
+-
+-                // Keep connections alive between downloads so subsequent requests
+-                // skip the TCP + TLS handshake.
+-                PooledConnectionLifetime  = TimeSpan.FromMinutes(10),
+-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+-
+-                // Larger initial receive buffer reduces syscall overhead on fast links.
+-                InitialHttp2StreamWindowSize = 1024 * 1024, // 1 MB
+-            };
+-
+-            // GitHub API token ÔÇö raises rate limit from 60 to 5000 req/hour. Attached per request,
+-            // for GitHub hosts only, by GitHubTokenHandler (never a default header: this client
+-            // also talks to non-GitHub hosts and manifest URLs).
+-            GitHubTokenHandler.SetToken(DevUnlockService.GitHubApiToken);
+-            var client = new HttpClient(new GitHubTokenHandler(handler));
+-            client.DefaultRequestHeaders.Add("User-Agent", "RHI/2.0");
+-            // Per-request timeout ÔÇö generous enough for large files on slow connections.
+-            // Individual services can set per-request timeouts via CancellationTokenSource
+-            // if they need tighter control.
+-            client.Timeout = TimeSpan.FromMinutes(10);
+-            client.DefaultRequestVersion = new Version(2, 0);
+-            client.DefaultVersionPolicy  = HttpVersionPolicy.RequestVersionOrLower;
+-            return client;
+-        });
+-
+-        // Shared ETag cache for GitHub API conditional requests (304 Not Modified)
+-        services.AddSingleton<GitHubETagCache>();
+-
+-        // Services ÔÇö all singletons
+-        services.AddSingleton<IModInstallService, ModInstallService>();
+-        services.AddSingleton<IAuxInstallService, AuxInstallService>();
+-        services.AddSingleton<IWikiService, WikiService>();
+-        services.AddSingleton<IManifestService, ManifestService>();
+-        services.AddSingleton<IGameLibraryService, GameLibraryService>();
+-        services.AddSingleton<IReShadeUpdateService, ReShadeUpdateService>();
+-        services.AddSingleton<INormalReShadeUpdateService, NormalReShadeUpdateService>();
+-        services.AddSingleton<ReShadeNightlyService>();
+-        services.AddSingleton<IUpdateService, UpdateService>();
+-        services.AddSingleton<ILumaService, LumaService>();
+-        services.AddSingleton<IShaderPackService, ShaderPackService>();
+-        services.AddSingleton<IGameDetectionService, GameDetectionService>();
+-        services.AddSingleton<IPeHeaderService, PeHeaderService>();
+-        services.AddSingleton<ICrashReporter, CrashReporterService>();
+-        services.AddSingleton<IAuxFileService>(sp => sp.GetRequiredService<IAuxInstallService>() as AuxInstallService
+-            ?? throw new InvalidOperationException("IAuxInstallService must be AuxInstallService"));
+-        services.AddSingleton<IREFrameworkService, REFrameworkService>();
+-        services.AddSingleton<INexusModsService, NexusModsService>();
+-        services.AddSingleton<INexusUpdateService, NexusUpdateService>();
+-        services.AddSingleton<ISteamAppIdResolver, SteamAppIdResolver>();
+-        services.AddSingleton<IPcgwService, PcgwService>();
+-        services.AddSingleton<ICustomFolderScanService, CustomFolderScanService>();
+-        services.AddSingleton<IUltrawideFixService, UltrawideFixService>();
+-        services.AddSingleton<IUltraPlusService, UltraPlusService>();
+-
+-        // ViewModels
+-        services.AddSingleton<SettingsViewModel>();
+-        services.AddSingleton<FilterViewModel>();
+-
+-        // Extracted services
+-        services.AddSingleton<IUpdateOrchestrationService, UpdateOrchestrationService>();
+-        services.AddSingleton<IDllOverrideService, DllOverrideService>();
+-        services.AddSingleton<IGameNameService, GameNameService>();
+-        services.AddSingleton<IGameInitializationService, GameInitializationService>();
+-        services.AddSingleton<ISevenZipExtractor, ReShadeExtractor>();
+-        services.AddSingleton<IOptiScalerService, OptiScalerService>();
+-        services.AddSingleton<IOptiScalerWikiService, OptiScalerWikiService>();
+-        services.AddSingleton<IHdrDatabaseService, HdrDatabaseService>();
+-        services.AddSingleton<IDxvkService, DxvkService>();
+-        services.AddSingleton<IInstallFolderMigrationService, InstallFolderMigrationService>();
+-        // Lazy<IDxvkService> breaks the circular dependency between OptiScalerService Ôåö DxvkService
+-        services.AddSingleton<Lazy<IDxvkService>>(sp => new Lazy<IDxvkService>(() => sp.GetRequiredService<IDxvkService>()));
+-        services.AddSingleton<IDlssStreamlineService, DlssStreamlineService>();
+-        services.AddSingleton<DlssPresetService>();
+-        services.AddSingleton<DofFixService>();
+-        services.AddSingleton<UltimateAsiLoaderService>();
+-        services.AddSingleton<DlssNrCostScalerService>();
+-        services.AddSingleton<Rtx40MfgService>();
+-        services.AddSingleton<Dlssg20_30Service>();
+-        services.AddSingleton<AutoUpdateService>();
+-        services.AddSingleton<DlssEnablerService>();
+-        services.AddSingleton<DgVoodooService>();
+-        services.AddSingleton<Renodx5AddonService>();
+-        services.AddSingleton<CustomReShadeHashService>();
+-        services.AddSingleton<SeenWikiModsService>();
+-        services.AddSingleton<SeenUltraPlusModsService>();
+-        services.AddSingleton<SeenLumaModsService>();
+-        services.AddSingleton<IUpdateLogService, UpdateLogService>();
+-        services.AddSingleton<IRenoDXDbService, RenoDXDbService>();
+-        services.AddSingleton<NexusDownloadService>();
+-        services.AddSingleton<NexusSsoService>();
+-        services.AddSingleton<GitHubAuthService>();
+-        services.AddSingleton<IDldsrService, DldsrService>();
+-        services.AddSingleton<IAutoHdrService, AutoHdrService>();
+-        services.AddSingleton<RtxEncoreService>();
+-        services.AddSingleton<UpliftService>();
+-        // Lazy<IDlssStreamlineService> breaks the circular dependency between OptiScalerService Ôåö DlssStreamlineService
+-        services.AddSingleton<Lazy<IDlssStreamlineService>>(sp => new Lazy<IDlssStreamlineService>(() => sp.GetRequiredService<IDlssStreamlineService>()));
+-
+-        services.AddSingleton<MainViewModel>();
+-
+-        // Window ÔÇö transient so each request creates a new instance
+-        services.AddTransient<MainWindow>();
++        ServiceRegistration.Configure(services);
+ 
+         Services = services.BuildServiceProvider();
+-
+-        // GITC Uplift's shaders stay in a game's reshade-shaders folder while it's installed there
+-        var uplift = Services.GetRequiredService<UpliftService>();
+-        ShaderPackService.ExtraGameFiles = uplift.ShaderFilesFor;
++        ServiceRegistration.AfterBuild(Services);
+     }
+ 
+     protected override async void OnLaunched(LaunchActivatedEventArgs args)
+diff --git a/RenoDXCommander/MainWindow.Events.Install.cs b/RenoDXCommander/MainWindow.Events.Install.cs
+index 014cc6c7..fbef9e45 100644
+--- a/RenoDXCommander/MainWindow.Events.Install.cs
++++ b/RenoDXCommander/MainWindow.Events.Install.cs
+@@ -656,7 +656,7 @@ public sealed partial class MainWindow
+         }
+     }
+ 
+-    internal async Task LaunchGameAsync(GameCardViewModel card)
++    internal async Task<bool> LaunchGameAsync(GameCardViewModel card)
+     {
+         try
+         {
+@@ -772,7 +772,7 @@ public sealed partial class MainWindow
+                     WorkingDirectory = System.IO.Path.GetDirectoryName(userExe) ?? "",
+                 });
+                 MonitorLaunch(proc, session);
+-                return;
++                return true;
+             }
+ 
+             // 2. Manifest override (relative path from InstallPath)
+@@ -792,7 +792,7 @@ public sealed partial class MainWindow
+                         WorkingDirectory = card.InstallPath ?? "",
+                     });
+                     MonitorLaunch(proc, session);
+-                    return;
++                    return true;
+                 }
+             }
+ 
+@@ -827,7 +827,7 @@ public sealed partial class MainWindow
+                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(steamUri) { UseShellExecute = true });
+                 }
+                 MonitorLaunch(null, session);
+-                return;
++                return true;
+             }
+ 
+             // 4. Epic Games Store protocol (skip if args set ÔÇö protocol doesn't support game args)
+@@ -838,7 +838,7 @@ public sealed partial class MainWindow
+                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via Epic protocol: {epicUri}");
+                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(epicUri) { UseShellExecute = true });
+                 MonitorLaunch(null, session);
+-                return;
++                return true;
+             }
+ 
+             // 5. Xbox / Game Pass ÔÇö launch via shell:AppsFolder using AUMID
+@@ -850,7 +850,7 @@ public sealed partial class MainWindow
+                 _crashReporter.Log($"[MainWindow.LaunchGameAsync] Launching '{gameName}' via Xbox AUMID: {card.DetectedGame.XboxAumid}");
+                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri) { UseShellExecute = true });
+                 MonitorLaunch(null, session);
+-                return;
++                return true;
+             }
+ 
+             // 6. Direct exe ÔÇö find the game exe in InstallPath
+@@ -881,7 +881,7 @@ public sealed partial class MainWindow
+                         WorkingDirectory = installPath,
+                     });
+                     MonitorLaunch(proc, session);
+-                    return;
++                    return true;
+                 }
+             }
+ 
+@@ -892,10 +892,13 @@ public sealed partial class MainWindow
+                 LaunchSessionStore.Default.Add(session);
+                 RevertLaunchChanges(session);
+             }
++
++            return false;
+         }
+         catch (Exception ex)
+         {
+             _crashReporter.Log($"[MainWindow.LaunchGameAsync] Failed to launch '{card.GameName}' ÔÇö {ex.Message}");
++            return false;
+         }
+     }
+ 
+diff --git a/RenoDXCommander/MainWindow.Overlay.cs b/RenoDXCommander/MainWindow.Overlay.cs
+index 508cbd97..20872b47 100644
+--- a/RenoDXCommander/MainWindow.Overlay.cs
++++ b/RenoDXCommander/MainWindow.Overlay.cs
+@@ -35,6 +35,8 @@ public sealed partial class MainWindow
+     /// <summary>Starts the overlay (once, after startup). Runs whether RHI starts shown or in the tray.</summary>
+     private void InitRhiOverlay()
+     {
++        Cli.CliRuntime.Window = this;
++        Cli.CliPipe.StartServer(DispatcherQueue);
+         if (IsShuttingDown || _overlayHotkey != null) return;
+         try
+         {
+@@ -81,6 +83,10 @@ public sealed partial class MainWindow
+ 
+     private string RhiOverlayHotkeyText() => HotkeyManager.FormatHotkeyDisplay(ViewModel.Settings.RhiOverlayHotkey);
+ 
++    internal void OverlayToggleFromCli() => ToggleRhiOverlay();
++
++    internal bool OverlayVisible => _overlayWindow is not null;
++
+     private void ToggleRhiOverlay()
+     {
+         if (IsShuttingDown || !ViewModel.Settings.RhiOverlayEnabled) return;
+diff --git a/RenoDXCommander/Program.cs b/RenoDXCommander/Program.cs
+index e4b4c005..6f04c63d 100644
+--- a/RenoDXCommander/Program.cs
++++ b/RenoDXCommander/Program.cs
+@@ -16,8 +16,13 @@ public static class Program
+     internal static volatile bool XamlStarted;
+ 
+     [STAThread]
+-    private static void Main(string[] args)
++    private static int Main(string[] args)
+     {
++        // Terminal mode: `RHI.exe --cli <command> ...` runs a command and exits without starting
++        // WinUI, so a batch file never opens a window and never waits for the app runtime.
++        if (args.Length > 0 && Cli.CliHost.IsEntryPoint(args[0]))
++            return Cli.CliHost.Run(args[1..]);
++
+         try
+         {
+             XamlGeneratedProgram.XamlGeneratedMain();
+@@ -27,7 +32,10 @@ public static class Program
+             try { Services.CrashReporter.Log($"[Program.Main] WinUI failed to start ÔÇö {ex.GetType().Name}: {ex.Message}"); }
+             catch (Exception logEx) { Debug.WriteLine($"[Program.Main] Log failed ÔÇö {logEx.Message}"); }
+             ShowRuntimeMissing(ex);
++            return 1;
+         }
++
++        return 0;
+     }
+ 
+     private static void ShowRuntimeMissing(Exception ex)
+diff --git a/RenoDXCommander/RenoDXCommander.csproj b/RenoDXCommander/RenoDXCommander.csproj
+index 4d82a6a4..ece618d3 100644
+--- a/RenoDXCommander/RenoDXCommander.csproj
++++ b/RenoDXCommander/RenoDXCommander.csproj
+@@ -201,4 +201,8 @@
+     <PackageReference Include="SharpCompress" Version="0.37.2" />
+     <PackageReference Include="System.Management" Version="8.0.0" />
+   </ItemGroup>
++  <ItemGroup>
++    <None Include="..\LiveAddon\rhi-live.addon32" Link="rhi-live.addon32" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\LiveAddon\rhi-live.addon32')" />
++    <None Include="..\LiveAddon\rhi-live.addon64" Link="rhi-live.addon64" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\LiveAddon\rhi-live.addon64')" />
++  </ItemGroup>
+ </Project>
